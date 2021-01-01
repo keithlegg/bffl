@@ -15,7 +15,9 @@
 
 /***************************************************************/
 
+extern bool show_diag_msg;
 extern bool do_diagnose;
+
 extern bool diagnose_final_fid;
 extern bool diagnose_anchors; 
 extern bool diagnose_verify;
@@ -279,7 +281,12 @@ void runscan(char* imagepath, int coarse_arg, int max_arg  )
         max_arg    = max_arg/shrinkage;
     }
 
-    printf("DEBUG scan settings are %i %i\n", coarse_arg, max_arg);
+    if (show_diag_msg)
+    {
+        printf("DEBUG scan settings are %i %i\n", coarse_arg, max_arg);
+    }
+
+    /**********************************/
 
 
     RGBAType *pxl_gauss = copyBuffer32(pxl_input, w, h); 
@@ -310,13 +317,17 @@ void runscan(char* imagepath, int coarse_arg, int max_arg  )
     fiducials = process_file( pxl_gauss, pxl_diag, w, h, coarse_arg, max_arg, fine_distance, &candidate_count);
 
    if (do_diagnose){
-       char filename[] = "diagnostic.png";
+
        /*
        char cwd[1024];
        if (getcwd(cwd, sizeof(cwd)) != NULL){
            printf("Saving image %s/%s\n\n", cwd, filename);     
        }
        */
+       char gausfname[] = "gaus_diag.png";
+       write_buffer_png(pxl_gauss, row_pointers, gausfname, w, h, png_ptr, info_ptr, bit_depth, color_type ) ;
+       
+       char filename[] = "diagnostic.png";
        write_buffer_png(pxl_diag, row_pointers, filename, w, h, png_ptr, info_ptr, bit_depth, color_type ) ;
 
    }
@@ -646,7 +657,7 @@ void parseArgs(int argc, char **argv)
     char diagnose_image_name[] = "diagnostic.png";
     
     /***************************/
-        
+
     //defualt scan mode
     strcpy(scanmode, "scan");
     if( strcmp(argv[1], scanmode) == 0)
@@ -657,8 +668,8 @@ void parseArgs(int argc, char **argv)
         int coarse = atoi(argv[3]);   
         int max    = atoi(argv[4]); 
        
-        // runscan(argv[2], coarse, max );
-        run_multiscan(argv[2], coarse, max);
+        runscan(argv[2], coarse, max );
+        //run_multiscan(argv[2], coarse, max);
     }
     
     /***************************/
@@ -688,8 +699,8 @@ void parseArgs(int argc, char **argv)
         diagnose_verif_angles  = true;        
         diagnose_verif_rings   = true;
 
-        //runscan( argv[2], *(ptr+2) , *(ptr+3));
-        run_multiscan(argv[2], *(ptr+2), *(ptr+3));
+        runscan( argv[2], *(ptr+2) , *(ptr+3));
+        //run_multiscan(argv[2], *(ptr+2), *(ptr+3));
 
     }    
     
@@ -709,8 +720,8 @@ void parseArgs(int argc, char **argv)
         diagnose_verif_angles  = true;    
         diagnose_verif_rings   = true;
 
-        //runscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
-        run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
+        runscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
+        //run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
     }    
 
     /***************************/
@@ -732,8 +743,8 @@ void parseArgs(int argc, char **argv)
       int coarse = atoi(argv[3]);   
       int max    = atoi(argv[4]); 
 
-      //runscan(argv[2], coarse, max );
-      run_multiscan(argv[2], coarse, max );
+      runscan(argv[2], coarse, max );
+      //run_multiscan(argv[2], coarse, max );
     }    
 
     /***************************/
@@ -748,7 +759,8 @@ void parseArgs(int argc, char **argv)
       do_diagnose         = true;
       diagnose_midpoints  = true;  
       
-      run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
+      runscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
+      //run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
     }  
 
      /***************************/
@@ -761,8 +773,9 @@ void parseArgs(int argc, char **argv)
         }
         do_diagnose         = true;
         diagnose_firsthit   = true; 
-        //runscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
-        run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
+        
+        runscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
+        //run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
     }  
     
     /***************************/
@@ -775,65 +788,71 @@ void parseArgs(int argc, char **argv)
         diagnose_verify     = true;
         diagnose_confidence = true;
         diagnose_final_fid  = true; 
-        //runscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
-        run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );      
+        
+        runscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
+        //run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );      
+    }  
+
+    /***************************/
+    strcpy(scanmode, "info");
+    if( strcmp(argv[1], scanmode) == 0)
+    {
+        int* ptr = 0;
+        //  format is : [width, height, coarse, max , 24/32 , bits per channel]
+        ptr = read_png_fileinfo( argv[2], w, h, png_ptr, info_ptr, color_type, bit_depth );
+        printf("********************\n" );
+        printf("scan settings:    coarse %i max %i \n", *(ptr+2), *(ptr+3) );
+        printf("width             %i \n", *(ptr  ) );    
+        printf("height            %i \n", *(ptr+1) );  
+        printf("image bit depth   %i \n", *(ptr+4) );  
+        printf("channel depth     %i \n", *(ptr+5) );  
+        printf("scale factor      %i \n", *(ptr+6) ); 
+        printf("gaussian passes   %i \n", *(ptr+7) ); 
+        printf("enable prescaling %i \n", *(ptr+8) ); 
+        printf("********************\n" );
+    }
+
+    /***************************/
+
+    strcpy(scanmode, "gaussian");
+    if( strcmp(argv[1], scanmode) == 0)
+    {
+        //show_guassian - <IMAGE> <SIZE> <THRESH_VALUE>
+        //show_guassian( argv[2], argv[3], atoi(argv[4]), atoi(argv[5]) ); //node style i/o 
+        show_guassian( argv[2], atoi(argv[3]), atoi(argv[4]) );
+    }
+
+    /***************************/    
+    strcpy(scanmode, "threshold");
+    if( strcmp(argv[1], scanmode) == 0)
+    {
+        show_threshold( argv[2], diagnose_image_name, atoi(argv[3]), atoi(argv[4]) );
+    }
+
+    /***************************/
+    strcpy(scanmode, "help");
+    if( strcmp(argv[1], scanmode) == 0){;
+        printf("\nUsage: \n");
+        printf("    scanfids <mode> <imagename.png> <coarse> <max> \n");
+        printf("      modes are :  scan, final, anchor, midpoint, firsthit, info, auto, dumpcache, testverify \n");
+        printf("  \n");
+        printf("    mode args: \n");
+        printf("      info       : scanfids info IMAGE \n");  
+        printf("      auto       : scanfids auto IMAGE \n");  
+        printf("      scan       : scanfids scan IMAGE COARSE MAX\n");
+        printf("      final      : scanfids final IMAGE COARSE MAX\n");
+        printf("      anchor     : scanfids anchor IMAGE COARSE MAX\n");
+        printf("      midpoint   : scanfids midpoint IMAGE COARSE MAX\n");                                                     
+        printf("      firsthit   : scanfids firsthit IMAGE COARSE MAX\n");
+        printf("      gaussian   : scanfids guassian IMAGE COARSE MAX  \n"); 
+        printf("      dumpcache  : scanfids dumpcache IMAGE COARSE MAX\n");
+        printf("      testverify : scanfids testverify IMAGE X Y COARSE MAX\n");        
+        printf("      threshold  : scanfids threshold IMAGE BLURAD CLAMPTHRESH  \n"); 
+        printf("  \n");
     }  
 
     /***************************/
 
-    // strcpy(scanmode, "info");
-    // if( strcmp(argv[1], scanmode) == 0)
-    // {
-    //     int* ptr = 0;
-    //     //  format is : [width, height, coarse, max , 24/32 , bits per channel]
-    //     ptr = read_png_fileinfo( argv[2], w, h, png_ptr, info_ptr, color_type, bit_depth );
-    //     printf("********************\n" );
-    //     printf("scan settings:    coarse %i max %i \n", *(ptr+2), *(ptr+3) );
-    //     printf("width             %i \n", *(ptr  ) );    
-    //     printf("height            %i \n", *(ptr+1) );  
-    //     printf("image bit depth   %i \n", *(ptr+4) );  
-    //     printf("channel depth     %i \n", *(ptr+5) );  
-    //     printf("scale factor      %i \n", *(ptr+6) ); 
-    //     printf("gaussian passes   %i \n", *(ptr+7) ); 
-    //     printf("enable prescaling %i \n", *(ptr+8) ); 
-    //     printf("********************\n" );
-    // }
-    
-    // strcpy(scanmode, "gaussian");
-    // if( strcmp(argv[1], scanmode) == 0)
-    // {
-    //     //show_guassian - <IMAGE> <SIZE> <THRESH_VALUE>
-    //     //show_guassian( argv[2], argv[3], atoi(argv[4]), atoi(argv[5]) ); //node style i/o 
-    //     show_guassian( argv[2], atoi(argv[3]), atoi(argv[4]) );
-    // }
-    
-    // strcpy(scanmode, "threshold");
-    // if( strcmp(argv[1], scanmode) == 0)
-    // {
-    //     show_threshold( argv[2], diagnose_image_name, atoi(argv[3]), atoi(argv[4]) );
-    // }
-
-    // strcpy(scanmode, "help");
-    // if( strcmp(argv[1], scanmode) == 0){;
-    //     printf("\nUsage: \n");
-    //     printf("    scanfids <mode> <imagename.png> <coarse> <max> \n");
-    //     printf("      modes are :  scan, final, anchor, midpoint, firsthit, info, auto, dumpcache, testverify \n");
-    //     printf("  \n");
-    //     printf("    mode args: \n");
-    //     printf("      info       : scanfids info IMAGE \n");  
-    //     printf("      auto       : scanfids auto IMAGE \n");  
-    //     printf("      scan       : scanfids scan IMAGE COARSE MAX\n");
-    //     printf("      final      : scanfids final IMAGE COARSE MAX\n");
-    //     printf("      anchor     : scanfids anchor IMAGE COARSE MAX\n");
-    //     printf("      midpoint   : scanfids midpoint IMAGE COARSE MAX\n");                                                     
-    //     printf("      firsthit   : scanfids firsthit IMAGE COARSE MAX\n");
-    //     printf("      gaussian   : scanfids guassian IMAGE COARSE MAX  \n"); 
-    //     printf("      dumpcache  : scanfids dumpcache IMAGE COARSE MAX\n");
-    //     printf("      testverify : scanfids testverify IMAGE X Y COARSE MAX\n");        
-    //     printf("      threshold  : scanfids threshold IMAGE BLURAD CLAMPTHRESH  \n"); 
-    //     printf("  \n");
-    // }  
-        
     // strcpy(scanmode, "about");
     // if( strcmp(argv[1], scanmode) == 0){;
     //     printf("***********************************\n" );
@@ -842,6 +861,7 @@ void parseArgs(int argc, char **argv)
     //     printf("***********************************\n" );      
     // }  
     
+    /***************************/
 
     // //output a test image 
     // strcpy(scanmode, "test");
@@ -910,8 +930,10 @@ void parseArgs(int argc, char **argv)
     //     */
     // }    
     
-    //strcpy(scanmode, "testverify");
+    /***************************/
+
     // // ARGS are IMAGEPATH Xcoord Ycoord Coarse
+    // strcpy(scanmode, "testverify");
     // if( strcmp(argv[1], scanmode) == 0){
     //     do_diagnose            = true;
     //     diagnose_verify        = true;
@@ -927,7 +949,10 @@ void parseArgs(int argc, char **argv)
 int main(int argc, char **argv)
 {
 
+    
     do_diagnose         = true;
+    show_diag_msg       = true;
+
     parseArgs(argc, argv); //new args with mode added 
     return 1;
 }

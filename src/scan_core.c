@@ -39,8 +39,9 @@
 
 /*****************/
 //changed these to variables so we can set dynamically
-
+bool show_diag_msg         = false;   
 bool do_diagnose           = false; // output a diagnostic png image 
+
 bool diagnose_final_fid    = false; // show the fiducial anchors verified           - magenta 
 bool diagnose_anchors      = false; // show the possible hit anchors located        - orange
 bool diagnose_verify       = false; // show the pixels N S E W                      - blue 
