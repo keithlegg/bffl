@@ -21,7 +21,9 @@ LINKER   = g++
 
 # LINUX
 ifeq ($(UNAME), Linux)
-	LFLAGS   = -Wall -lglut -lGL -lGLU -lX11 -lXi  -lm -lz 
+	# LFLAGS   = -Wall -lglut -lGL -lGLU -lX11 -lXi  -lm -lz 
+	LFLAGS   = -Wall -lm -lz -lpng16
+
 endif
 
 # OSX
