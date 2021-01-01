@@ -268,7 +268,7 @@ void runscan(char* imagepath, int coarse_arg, int max_arg  )
     shrinkage             = *(ptr+2); //scale factor 1= full size, 2 = half , 3 = quarter
     guassian_passes       = (int)*(ptr+3); //number of guassian oversamples - can be very slow
     do_prescaler          = (int)*(ptr+4); //1 or 0 - bool represented as int 
-      
+
     //shrink the image first to speed up the scanning 
     if (do_prescaler && enable_prescaling)
     {
@@ -278,7 +278,10 @@ void runscan(char* imagepath, int coarse_arg, int max_arg  )
         coarse_arg = coarse_arg/shrinkage;
         max_arg    = max_arg/shrinkage;
     }
-    
+
+    printf("DEBUG scan settings are %i %i\n", coarse_arg, max_arg);
+
+
     RGBAType *pxl_gauss = copyBuffer32(pxl_input, w, h); 
     RGBAType *pxl_diag  = copyBuffer32(pxl_input, w, h);  
 
@@ -305,8 +308,6 @@ void runscan(char* imagepath, int coarse_arg, int max_arg  )
     }
     
     fiducials = process_file( pxl_gauss, pxl_diag, w, h, coarse_arg, max_arg, fine_distance, &candidate_count);
-
-   fiducials = process_file( pxl_gauss, pxl_diag, w, h, coarse_arg, max_arg, fine_distance, &candidate_count);
 
    if (do_diagnose){
        char filename[] = "diagnostic.png";
@@ -347,6 +348,8 @@ void runscan(char* imagepath, int coarse_arg, int max_arg  )
    free(pxl_diag);    
 }
 
+
+/***************************************/
 
 void run_multiscan(char* imagepath, int coarse_arg, int max_arg  ){
     /*
@@ -642,6 +645,8 @@ void parseArgs(int argc, char **argv)
     char scanmode[10];
     char diagnose_image_name[] = "diagnostic.png";
     
+    /***************************/
+        
     //defualt scan mode
     strcpy(scanmode, "scan");
     if( strcmp(argv[1], scanmode) == 0)
@@ -651,10 +656,13 @@ void parseArgs(int argc, char **argv)
         }
         int coarse = atoi(argv[3]);   
         int max    = atoi(argv[4]); 
-        //runscan(argv[2], coarse, max );
+       
+        // runscan(argv[2], coarse, max );
         run_multiscan(argv[2], coarse, max);
     }
     
+    /***************************/
+
     strcpy(scanmode, "auto");
     if( strcmp(argv[1], scanmode) == 0)
     {
@@ -685,6 +693,8 @@ void parseArgs(int argc, char **argv)
 
     }    
     
+    /***************************/
+
     strcpy(scanmode, "anchor");
     if( strcmp(argv[1], scanmode) == 0)
     {
@@ -702,7 +712,9 @@ void parseArgs(int argc, char **argv)
         //runscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
         run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
     }    
-    
+
+    /***************************/
+
     strcpy(scanmode, "final");
     if( strcmp(argv[1], scanmode) == 0)
     {
@@ -719,10 +731,13 @@ void parseArgs(int argc, char **argv)
 
       int coarse = atoi(argv[3]);   
       int max    = atoi(argv[4]); 
+
       //runscan(argv[2], coarse, max );
       run_multiscan(argv[2], coarse, max );
     }    
-    
+
+    /***************************/
+
     strcpy(scanmode, "midpoint");
     if( strcmp(argv[1], scanmode) == 0)
     {
@@ -735,21 +750,23 @@ void parseArgs(int argc, char **argv)
       
       run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
     }  
-    
+
+     /***************************/
+
     strcpy(scanmode, "firsthit");
     if( strcmp(argv[1], scanmode) == 0)
     {
-      if (argc !=5){
-        abort_("\nUsage: scan_fids firsthit <file in> <coarse> <max> ");
-      }
-
-      do_diagnose         = true;
-      diagnose_firsthit   = true; 
-
-      //runscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
-      run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
+        if (argc !=5){
+          abort_("\nUsage: scan_fids firsthit <file in> <coarse> <max> ");
+        }
+        do_diagnose         = true;
+        diagnose_firsthit   = true; 
+        //runscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
+        run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
     }  
     
+    /***************************/
+
     strcpy(scanmode, "dumpcache");
     if( strcmp(argv[1], scanmode) == 0){;
         //write out a text file of all fiducial data cached 
@@ -758,208 +775,160 @@ void parseArgs(int argc, char **argv)
         diagnose_verify     = true;
         diagnose_confidence = true;
         diagnose_final_fid  = true; 
-
         //runscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
         run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );      
-
     }  
+
+    /***************************/
+
+    // strcpy(scanmode, "info");
+    // if( strcmp(argv[1], scanmode) == 0)
+    // {
+    //     int* ptr = 0;
+    //     //  format is : [width, height, coarse, max , 24/32 , bits per channel]
+    //     ptr = read_png_fileinfo( argv[2], w, h, png_ptr, info_ptr, color_type, bit_depth );
+    //     printf("********************\n" );
+    //     printf("scan settings:    coarse %i max %i \n", *(ptr+2), *(ptr+3) );
+    //     printf("width             %i \n", *(ptr  ) );    
+    //     printf("height            %i \n", *(ptr+1) );  
+    //     printf("image bit depth   %i \n", *(ptr+4) );  
+    //     printf("channel depth     %i \n", *(ptr+5) );  
+    //     printf("scale factor      %i \n", *(ptr+6) ); 
+    //     printf("gaussian passes   %i \n", *(ptr+7) ); 
+    //     printf("enable prescaling %i \n", *(ptr+8) ); 
+    //     printf("********************\n" );
+    // }
     
-    strcpy(scanmode, "info");
-
-    if( strcmp(argv[1], scanmode) == 0)
-    {
-        int* ptr = 0;
-
-        //  format is : [width, height, coarse, max , 24/32 , bits per channel]
-        ptr = read_png_fileinfo( argv[2], w, h, png_ptr, info_ptr, color_type, bit_depth );
-
-        printf("********************\n" );
-        printf("scan settings:    coarse %i max %i \n", *(ptr+2), *(ptr+3) );
-        printf("width             %i \n", *(ptr  ) );    
-        printf("height            %i \n", *(ptr+1) );  
-        printf("image bit depth   %i \n", *(ptr+4) );  
-        printf("channel depth     %i \n", *(ptr+5) );  
-
-        printf("scale factor      %i \n", *(ptr+6) ); 
-        printf("gaussian passes   %i \n", *(ptr+7) ); 
-        printf("enable prescaling %i \n", *(ptr+8) ); 
-
-        printf("********************\n" );
-
-    }
+    // strcpy(scanmode, "gaussian");
+    // if( strcmp(argv[1], scanmode) == 0)
+    // {
+    //     //show_guassian - <IMAGE> <SIZE> <THRESH_VALUE>
+    //     //show_guassian( argv[2], argv[3], atoi(argv[4]), atoi(argv[5]) ); //node style i/o 
+    //     show_guassian( argv[2], atoi(argv[3]), atoi(argv[4]) );
+    // }
     
-    strcpy(scanmode, "gaussian");
+    // strcpy(scanmode, "threshold");
+    // if( strcmp(argv[1], scanmode) == 0)
+    // {
+    //     show_threshold( argv[2], diagnose_image_name, atoi(argv[3]), atoi(argv[4]) );
+    // }
 
-    if( strcmp(argv[1], scanmode) == 0)
-    {
-        //show_guassian - <IMAGE> <SIZE> <THRESH_VALUE>
-
-        //show_guassian( argv[2], argv[3], atoi(argv[4]), atoi(argv[5]) ); //node style i/o 
-        show_guassian( argv[2], atoi(argv[3]), atoi(argv[4]) );
-    }
+    // strcpy(scanmode, "help");
+    // if( strcmp(argv[1], scanmode) == 0){;
+    //     printf("\nUsage: \n");
+    //     printf("    scanfids <mode> <imagename.png> <coarse> <max> \n");
+    //     printf("      modes are :  scan, final, anchor, midpoint, firsthit, info, auto, dumpcache, testverify \n");
+    //     printf("  \n");
+    //     printf("    mode args: \n");
+    //     printf("      info       : scanfids info IMAGE \n");  
+    //     printf("      auto       : scanfids auto IMAGE \n");  
+    //     printf("      scan       : scanfids scan IMAGE COARSE MAX\n");
+    //     printf("      final      : scanfids final IMAGE COARSE MAX\n");
+    //     printf("      anchor     : scanfids anchor IMAGE COARSE MAX\n");
+    //     printf("      midpoint   : scanfids midpoint IMAGE COARSE MAX\n");                                                     
+    //     printf("      firsthit   : scanfids firsthit IMAGE COARSE MAX\n");
+    //     printf("      gaussian   : scanfids guassian IMAGE COARSE MAX  \n"); 
+    //     printf("      dumpcache  : scanfids dumpcache IMAGE COARSE MAX\n");
+    //     printf("      testverify : scanfids testverify IMAGE X Y COARSE MAX\n");        
+    //     printf("      threshold  : scanfids threshold IMAGE BLURAD CLAMPTHRESH  \n"); 
+    //     printf("  \n");
+    // }  
+        
+    // strcpy(scanmode, "about");
+    // if( strcmp(argv[1], scanmode) == 0){;
+    //     printf("***********************************\n" );
+    //     printf("\"scanfids\" version %s \n", version );
+    //     printf("modified : December 16th, 2014 \n" );
+    //     printf("***********************************\n" );      
+    // }  
     
-    strcpy(scanmode, "threshold");
 
-    if( strcmp(argv[1], scanmode) == 0)
-    {
-        show_threshold( argv[2], diagnose_image_name, atoi(argv[3]), atoi(argv[4]) );
-    }
-
-    strcpy(scanmode, "help");
-    if( strcmp(argv[1], scanmode) == 0){;
-        printf("\nUsage: \n");
-        printf("    scanfids <mode> <imagename.png> <coarse> <max> \n");
-        printf("      modes are :  scan, final, anchor, midpoint, firsthit, info, auto, dumpcache, testverify \n");
-        printf("  \n");
-        
-        printf("    mode args: \n");
- 
-        printf("      info       : scanfids info IMAGE \n");  
-        printf("      auto       : scanfids auto IMAGE \n");  
-
-        printf("      scan       : scanfids scan IMAGE COARSE MAX\n");
-        printf("      final      : scanfids final IMAGE COARSE MAX\n");
-        printf("      anchor     : scanfids anchor IMAGE COARSE MAX\n");
-        printf("      midpoint   : scanfids midpoint IMAGE COARSE MAX\n");                                                     
-        printf("      firsthit   : scanfids firsthit IMAGE COARSE MAX\n");
-        printf("      gaussian   : scanfids guassian IMAGE COARSE MAX  \n"); 
-
-        printf("      dumpcache  : scanfids dumpcache IMAGE COARSE MAX\n");
-        printf("      testverify : scanfids testverify IMAGE X Y COARSE MAX\n");        
-        printf("      threshold  : scanfids threshold IMAGE BLURAD CLAMPTHRESH  \n"); 
-        printf("  \n");
-    }  
-        
-    strcpy(scanmode, "about");
-    if( strcmp(argv[1], scanmode) == 0){;
-        printf("***********************************\n" );
-        printf("\"scanfids\" version %s \n", version );
-        printf("modified : December 16th, 2014 \n" );
-        printf("***********************************\n" );      
-    }  
+    // //output a test image 
+    // strcpy(scanmode, "test");
+    // if( strcmp(argv[1], scanmode) == 0)
+    // {
+    //     if (argc <3){
+    //         abort_("\nUsage: scan_fids <blah> <outfile>");
+    //     }
+    //     // TEST BUILD A NEW FRAMEBUFFER AND DRAW ON IT WITH VECTORS
+    //     RGBType bgcolor;
+    //     bgcolor.r=20;bgcolor.g=45;bgcolor.b=30;
+    //     RGBType linecol;
+    //     linecol.r=0;linecol.g=0;linecol.b=0;
+    //     int locwidth  = 0;
+    //     int locheight = 0;
+    //     //RGBAType *pixels  = createBuffer32(locwidth, locheight);
+    //     //fillbuffer32( pixels, locwidth, locheight, &bgcolor);
+    //     RGBAType *pixels = read_png_create_buffer32( argv[2], &locwidth, &locheight); //main image
+    //     RGBAType *pixels2 = createBuffer32(locwidth, locheight);        
+    //     fillbuffer32( pixels2, locwidth, locheight, &linecol);
+    //     pixels2 = copyBufferEveryOther32(pixels, &locwidth, &locheight, 4);
+    //     //ScaleRect(pixels2, pixels, locwidth, locheight, locwidth/3 , locheight/3 );
+    //     //pixels2 = blitBuffer32( pixels, &locwidth, &locheight, 100, 100,  800, 800 );
+    //     // vector2d v1 = line2vect( 10, 10, 35, 2 );    
+    //     // vector2d v2 = line2vect( 10, 10, -22, 22 );              
+    //     // draw_vector ( pixels, locwidth, v1 , 120, 120, &linecol );
+    //     // draw_vector ( pixels, locwidth, v2 , 120, 120, &linecol );
+    //     //printf( "final out is  %i %i ", locwidth, locheight );
+    //     char title[] = "scanfidstest";
+    //     writePng32(pixels2, diagnose_image_name, locwidth, locheight, title);
+    //     //saveBMP_24bit(copyBuffer_24bit(pixels, locwidth, locheight) , diagnose_image_name, locwidth, locheight );
+    //     //cleanup_heap(row_pointers, h);   
+    //     free(pixels); 
+    //     //test_verify_angles(argv[2]);
+    //     /* 
+    //     // TEST BMP LOAD AND SAVE 
+    //     int locwidth  = 0;
+    //     int locheight = 0;
+    //     RGBType *pixels  = createBuffer24(locwidth, locheight);     
+    //     loadBMP_24bit(pixels, argv[2], &locwidth, &locheight);
+    //     char * outfile = "foo.bmp";
+    //     saveBMP_24bit(pixels, outfile, locwidth, locheight);
+    //     */
+    //     /*
+    //     // TEST BUILD A NEW FRAMEBUFFER AND DRAW ON IT WITH VECTORS
+    //     RGBType bgcolor;
+    //     bgcolor.r=20;bgcolor.g=45;bgcolor.b=30;
+    //     RGBType linecol;
+    //     linecol.r=0;linecol.g=255;linecol.b=0;
+    //     int locwidth  = 400;
+    //     int locheight = 400;
+    //     RGBAType *pixels  = createBuffer_32bit(locwidth, locheight);
+    //     RGBAType *pixels2 = createBuffer_32bit(locwidth, locheight);        
+    //     fill_buffer( pixels, locwidth, locheight, &bgcolor);
+    //     //verify_wheel(pixels, pixels, locwidth, locheight, 16, 25.0, 40, 40);
+    //     //verify_rings(pixels, pixels, locwidth, locheight, 5, 20, 20);
+    //     // vector2d v1 = line2vect( 10, 10, 35, 2 );    
+    //     // vector2d v2 = line2vect( 10, 10, -22, 22 );              
+    //     // draw_vector ( pixels, locwidth, v1 , 120, 120, &linecol );
+    //     // draw_vector ( pixels, locwidth, v2 , 120, 120, &linecol );
+    //     char title[] = "scanfidstest";
+    //     writeImage(pixels, diagnose_image_name, locwidth, locheight, title);
+    //     //saveBMP_24bit(copyBuffer_24bit(pixels, locwidth, locheight) , diagnose_image_name, locwidth, locheight );
+    //     //cleanup_heap(row_pointers, h);   
+    //     free(pixels); 
+    //     */
+    // }    
     
-    //output a test image 
-    strcpy(scanmode, "test");
-
-    if( strcmp(argv[1], scanmode) == 0)
-    {
-        if (argc <3){
-            abort_("\nUsage: scan_fids <blah> <outfile>");
-        }
-
-        
-       // TEST BUILD A NEW FRAMEBUFFER AND DRAW ON IT WITH VECTORS
-        RGBType bgcolor;
-        bgcolor.r=20;bgcolor.g=45;bgcolor.b=30;
-
-        RGBType linecol;
-        linecol.r=0;linecol.g=0;linecol.b=0;
-
-        int locwidth  = 0;
-        int locheight = 0;
-        
-        
-        //RGBAType *pixels  = createBuffer32(locwidth, locheight);
-        //fillbuffer32( pixels, locwidth, locheight, &bgcolor);
-
-        RGBAType *pixels = read_png_create_buffer32( argv[2], &locwidth, &locheight); //main image
-
-        RGBAType *pixels2 = createBuffer32(locwidth, locheight);        
-        
-        fillbuffer32( pixels2, locwidth, locheight, &linecol);
-
-        pixels2 = copyBufferEveryOther32(pixels, &locwidth, &locheight, 4);
-        //ScaleRect(pixels2, pixels, locwidth, locheight, locwidth/3 , locheight/3 );
-
-        //pixels2 = blitBuffer32( pixels, &locwidth, &locheight, 100, 100,  800, 800 );
-        
-        
-        // vector2d v1 = line2vect( 10, 10, 35, 2 );    
-        // vector2d v2 = line2vect( 10, 10, -22, 22 );              
-        // draw_vector ( pixels, locwidth, v1 , 120, 120, &linecol );
-        // draw_vector ( pixels, locwidth, v2 , 120, 120, &linecol );
-        
-        //printf( "final out is  %i %i ", locwidth, locheight );
-
-        char title[] = "scanfidstest";
-        writePng32(pixels2, diagnose_image_name, locwidth, locheight, title);
-        //saveBMP_24bit(copyBuffer_24bit(pixels, locwidth, locheight) , diagnose_image_name, locwidth, locheight );
-
-        //cleanup_heap(row_pointers, h);   
-        free(pixels); 
-        
-
-       
-        //test_verify_angles(argv[2]);
-
-        /* 
-        // TEST BMP LOAD AND SAVE 
-        int locwidth  = 0;
-        int locheight = 0;
-        RGBType *pixels  = createBuffer24(locwidth, locheight);     
-        loadBMP_24bit(pixels, argv[2], &locwidth, &locheight);
-        
-        char * outfile = "foo.bmp";
-        saveBMP_24bit(pixels, outfile, locwidth, locheight);
-        */
-        
-        /*
-        // TEST BUILD A NEW FRAMEBUFFER AND DRAW ON IT WITH VECTORS
-        RGBType bgcolor;
-        bgcolor.r=20;bgcolor.g=45;bgcolor.b=30;
-
-        RGBType linecol;
-        linecol.r=0;linecol.g=255;linecol.b=0;
-
-        int locwidth  = 400;
-        int locheight = 400;
-        
-        RGBAType *pixels  = createBuffer_32bit(locwidth, locheight);
-        RGBAType *pixels2 = createBuffer_32bit(locwidth, locheight);        
-
-        fill_buffer( pixels, locwidth, locheight, &bgcolor);
-
-        //verify_wheel(pixels, pixels, locwidth, locheight, 16, 25.0, 40, 40);
-        //verify_rings(pixels, pixels, locwidth, locheight, 5, 20, 20);
-        
-        
-        // vector2d v1 = line2vect( 10, 10, 35, 2 );    
-        // vector2d v2 = line2vect( 10, 10, -22, 22 );              
-        // draw_vector ( pixels, locwidth, v1 , 120, 120, &linecol );
-        // draw_vector ( pixels, locwidth, v2 , 120, 120, &linecol );
-        
-
-        char title[] = "scanfidstest";
-        writeImage(pixels, diagnose_image_name, locwidth, locheight, title);
-        //saveBMP_24bit(copyBuffer_24bit(pixels, locwidth, locheight) , diagnose_image_name, locwidth, locheight );
-
-        //cleanup_heap(row_pointers, h);   
-        free(pixels); 
-        */
-
-
-    }    
-    
-    strcpy(scanmode, "testverify");
-    
-    // ARGS are IMAGEPATH Xcoord Ycoord Coarse
-    if( strcmp(argv[1], scanmode) == 0){
-        do_diagnose            = true;
-        diagnose_verify        = true;
-        diagnose_confidence    = true;      
-        diagnose_verif_rings   = true;
-
-        float verif_dist    =  (float) (atoi(argv[5])*2) ; 
-
-        test_verify_point( argv[2], atoi(argv[3]), atoi(argv[4]), verif_dist, 15, atoi(argv[5]), atoi(argv[6]) ) ; 
-    }     
-    //test_verify_point
+    //strcpy(scanmode, "testverify");
+    // // ARGS are IMAGEPATH Xcoord Ycoord Coarse
+    // if( strcmp(argv[1], scanmode) == 0){
+    //     do_diagnose            = true;
+    //     diagnose_verify        = true;
+    //     diagnose_confidence    = true;      
+    //     diagnose_verif_rings   = true;
+    //     float verif_dist    =  (float) (atoi(argv[5])*2) ; 
+    //     test_verify_point( argv[2], atoi(argv[3]), atoi(argv[4]), verif_dist, 15, atoi(argv[5]), atoi(argv[6]) ) ; 
+    // }     
+    // //test_verify_point
 }
 
 
 int main(int argc, char **argv)
 {
-   parseArgs(argc, argv); //new args with mode added 
-   return 0;
+
+    do_diagnose         = true;
+    parseArgs(argc, argv); //new args with mode added 
+    return 1;
 }
 
