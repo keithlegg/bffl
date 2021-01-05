@@ -6,7 +6,7 @@ SRCDIR   =src
 OBJDIR   =obj
 BINDIR   =bin
 
-CC       = g++ 
+
 
 
 #detect the OS (linux or OSX, dont care about windows)
@@ -15,7 +15,11 @@ UNAME := $(shell uname)
 # compiling flags  
 CFLAGS   = -I$(INCDIR)  
 
+CC       = g++ 
 LINKER   = g++
+
+# CC       = gcc 
+# LINKER   = gcc
 
 # linking flags 
 

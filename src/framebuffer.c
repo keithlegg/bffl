@@ -1,7 +1,8 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <cmath>
+#include <cmath> //C++ library 
 
 #include "framebuffer.h"   
 #include "point_op.h"  

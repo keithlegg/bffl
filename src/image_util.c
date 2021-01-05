@@ -8,6 +8,74 @@
 #include "framebuffer.h"
 
 
+/***************************************************************/
+
+float* autoscan_settings (int width, int height)
+/*
+   returns settings based on image resolution
+   [coarse, max , scale factor, gaussian passes, enable prescaler  ]
+
+*/
+{
+    float out[10] = {0};
+
+    int longedge = 0;
+
+    if (width>height){
+        longedge = width;
+    }else{
+        longedge = height;
+    }
+    
+    int divisor          = 110; //was 132 
+    int sc_coarse        = (int) longedge/divisor;
+    int sc_max           = sc_coarse * 2;
+   
+    int guassian_passes  = 2; //number of passes to do blurring
+    float shrinkage      = 2; //scale factor (1=full, 2= half, 3=quarter size)
+    int enable_prescaler = 1; 
+    
+    if (longedge < 2300){
+        shrinkage = 1;
+        guassian_passes = 2;
+    } else {
+        shrinkage = ((float) longedge / (float) 2200);
+    }
+    
+    if (longedge >= 2300 and longedge <= 3500)
+    { 
+        //sc_coarse     = int(longedge/divisor  );  
+        //sc_max        = int(sc_coarse*2 ); 
+        shrinkage        = 2; 
+        //enable_prescaler = 1;                    
+    } 
+
+    if (longedge > 3500 && longedge < 4400 ) 
+    { 
+        //sc_coarse     = int(longedge/divisor  );  
+        //sc_max        = int(sc_coarse*2 );  
+        //enable_prescaler = 1;        
+        //guassian_passes  = 3; 
+        //shrinkage        = 2;                
+    } 
+
+    if (longedge >= 4400 )
+    {
+        //sc_coarse     = int(longedge/divisor  );  
+        //sc_max        = int(sc_coarse*2 ); 
+        //enable_prescaler = 1;
+        //guassian_passes  = 3; 
+        //shrinkage        = 2;
+    }
+        
+    //printf("#debug settings width %i height %i %i %i %i %i %i \n", width, height, sc_coarse, sc_max, shrinkage, guassian_passes, enable_prescaler );
+    out[0] = (float)sc_coarse;
+    out[1] = (float)sc_max;
+    out[2] = shrinkage;
+    out[3] = (float)guassian_passes;
+    out[4] = (float)enable_prescaler;
+    return &out[0];
+}
 
 /***************************************************************/
 
@@ -572,72 +640,7 @@ int writePng24(RGBType *pixels, char* filename, int w, int h, char* title)
     return code;
 }
 
-float* autoscan_settings (int width, int height)
-/*
-   returns settings based on image resolution
-   [coarse, max , scale factor, gaussian passes, enable prescaler  ]
 
-*/
-{
-    float out[10] = {0};
-
-    int longedge = 0;
-
-    if (width>height){
-        longedge = width;
-    }else{
-        longedge = height;
-    }
-    
-    int divisor          = 110; //was 132 
-    int sc_coarse        = (int) longedge/divisor;
-    int sc_max           = sc_coarse * 2;
-   
-    int guassian_passes  = 3; //number of passes to do blurring
-    float shrinkage      = 2; //scale factor (1=full, 2= half, 3=quarter size)
-    int enable_prescaler = 1; 
-    
-    if (longedge < 2300){
-        shrinkage = 1;
-        guassian_passes = 2;
-    } else {
-        shrinkage = ((float) longedge / (float) 2200);
-    }
-    
-    if (longedge >= 2300 and longedge <= 3500)
-    { 
-        //sc_coarse     = int(longedge/divisor  );  
-        //sc_max        = int(sc_coarse*2 ); 
-        shrinkage        = 2; 
-        //enable_prescaler = 1;                    
-    } 
-
-    if (longedge > 3500 && longedge < 4400 ) 
-    { 
-        //sc_coarse     = int(longedge/divisor  );  
-        //sc_max        = int(sc_coarse*2 );  
-        //enable_prescaler = 1;        
-        //guassian_passes  = 3; 
-        //shrinkage        = 2;                
-    } 
-
-    if (longedge >= 4400 )
-    {
-        //sc_coarse     = int(longedge/divisor  );  
-        //sc_max        = int(sc_coarse*2 ); 
-        //enable_prescaler = 1;
-        //guassian_passes  = 3; 
-        //shrinkage        = 2;
-    }
-        
-    //printf("#debug settings width %i height %i %i %i %i %i %i \n", width, height, sc_coarse, sc_max, shrinkage, guassian_passes, enable_prescaler );
-    out[0] = (float)sc_coarse;
-    out[1] = (float)sc_max;
-    out[2] = shrinkage;
-    out[3] = (float)guassian_passes;
-    out[4] = (float)enable_prescaler;
-    return &out[0];
-}
 
 int* read_png_fileinfo( const char* file_name, int width, int height, png_structp png_ptr, png_infop info_ptr, 
                         png_byte color_type, png_byte bit_depth )

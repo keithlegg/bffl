@@ -1,10 +1,13 @@
 #!/bin/bash
 
-commandstr="./scanfids scan out_6.png 30 40"
 
-#commandstr="./scanfids test out_6.png foo.png"
+# commandstr="./scanfids scan 0001.png 30 40"
 
-
+commandstr="./scanfids anchor 0001.png 30 40"
+echo "############"
 mytime="$(time $commandstr 2>&1 1>/dev/null )"
 echo "$mytime"
+
+
+
 

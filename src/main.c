@@ -1,4 +1,6 @@
 
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -50,7 +52,24 @@ png_infop info_ptr;
 char version[] = "1.311";
 
 
+/*
+void splitname( char* s, char *out )
+{
+ 
+    char* token = strtok(s, ".");
+    while (token) {
+        //printf("token: %s\n", token);
+        token = strtok(NULL, ".");
+        if (token)
+        {
+            strcpy(out, token);
+            //out = token;
+        }   
+        //printf("toke out: %s\n", out);
+    }
 
+}
+*/
 
 /***************************************************************/
 void read_png_file(const char* file_name, int *w, int *h)
@@ -140,7 +159,7 @@ RGBAType *read_png_create_buffer32( const char* file_name, int *w, int *h)
     return pixels;
 }
 
-
+/***************************************************************/
 
 
 /* 
@@ -173,12 +192,16 @@ void show_guassian(char* imagepath, int coarse_arg, int max_arg  )
     ptr =  autoscan_settings(w,h);
     guassian_passes       = (int)*(ptr+3); //number of guassian oversamples - can be very slow
     
+    printf("gaussian settings : passes %i \n", guassian_passes );
+
+
     //experiment - 1 time vs multipass
     //single pass blurring
     if (!enable_multipass_blur)
     {
         printf("# single pass blurring enabled\n");
         gaussBlur ( pxl_input, pxl_gauss , w, h, guassian_passes, true , clamp_darkval);
+        threshold ( pxl_gauss, w, h, clamp_darkval) ;
     }
      
     //multipass blurring works better!!
@@ -186,7 +209,9 @@ void show_guassian(char* imagepath, int coarse_arg, int max_arg  )
     {
         printf("# multi pass blurring enabled\n"); 
         int xx = 0;
-        for (xx=1;xx<=guassian_passes;xx++){
+        for (xx=1;xx<=guassian_passes;xx++)
+        {
+             printf("gauss pass %i \n", xx );
              gaussBlur( pxl_input, pxl_gauss , w, h, xx, true , 150);   
              pxl_input = copyBuffer32(pxl_gauss, w, h); 
         }
@@ -207,10 +232,18 @@ void show_guassian(char* imagepath, int coarse_arg, int max_arg  )
     free(pxl_gauss);  
 }
 
+/***************************************************************/
 
 void show_threshold(char* input, char* output, int blur_rad, int clamp_darkval)
 {
-   /* show output of the threshold operation */
+   /* show output of the threshold operation 
+
+       This is basically a "full on" contrast function. It considers a pixel to be black or white only based on 
+       a luminance threshold. 
+
+   */
+
+
    int w = 0;int h = 0;
 
    RGBAType *pxl_input = read_png_create_buffer32( input, &w, &h); //main image
@@ -241,10 +274,40 @@ void show_threshold(char* input, char* output, int blur_rad, int clamp_darkval)
 }
 
 
+/***************************************************************/
+
 void runscan(char* imagepath, int coarse_arg, int max_arg  )
 {
-    // Deprecated in favor of run_multiscan, since fixed settings were failing with some PDFs.
-    // a little wrapper function to aid with memory housekeeping, encapsulation, etc. 
+    /*
+        Improvement ideas:
+            arbitrary scaling / precaling 
+
+    */
+
+
+    /***************************/
+    // setup output image names 
+
+    char basename[256];
+    char* p_basename = strtok(strcpy(basename, imagepath), ".");
+
+    char    gausfname[20] = "";
+    char    diagfname[20] = "";
+    char    gausext[20] = "_gauss.png";
+    char    diagext[20] = "_diag.png";
+
+    strncat(gausfname, p_basename, 20);
+    strncat(gausfname, gausext, 20);
+    
+    strncat(diagfname, p_basename, 20);
+    strncat(diagfname, diagext, 20);
+
+    printf("gausfname %s \n", gausfname);
+    printf("diagfname %s \n", diagfname);
+
+
+    /***************************/
+
     int w = 0;int h = 0;
 
     int longedge = 0;
@@ -254,8 +317,14 @@ void runscan(char* imagepath, int coarse_arg, int max_arg  )
     int guassian_passes       = 0; //number of guassian oversamples - can be very slow
     int shrinkage             = 0; //scale factor 1= full size, 2 = half , 3 = quarter
  
+    int clamp_darkval         = 160; // Too high ruins dark images. Too low ruins light images. 160 is just right.
+    int candidate_count       = 0;
+
+
     RGBAType *pxl_input = read_png_create_buffer32( imagepath, &w, &h); //main image
-     
+    
+    printf("scanning image %s \n", imagepath );
+
     //seems to crash if it goes higher 
     if (!enable_prescaling)
     {
@@ -264,17 +333,16 @@ void runscan(char* imagepath, int coarse_arg, int max_arg  )
     }
     
     //determine optimum scan settings based on image resolution
-    float* ptr = 0;
-    ptr      =  autoscan_settings(w,h);
-    
-    shrinkage             = *(ptr+2); //scale factor 1= full size, 2 = half , 3 = quarter
-    guassian_passes       = (int)*(ptr+3); //number of guassian oversamples - can be very slow
-    do_prescaler          = (int)*(ptr+4); //1 or 0 - bool represented as int 
+    float* ptr =  autoscan_settings(w,h);
+    shrinkage             = *(ptr+2);      // scale factor 1= full size, 2 = half , 3 = quarter
+    guassian_passes       = (int)*(ptr+3); // number of guassian oversamples - can be very slow
+    do_prescaler          = (int)*(ptr+4); // 1 or 0 - bool represented as int 
 
     //shrink the image first to speed up the scanning 
     if (do_prescaler && enable_prescaling)
     {
         //printf("\n\n # DEBUG # coarse %i max %i scale_factor %i gausspasses %i do_prescale %i \n", coarse_arg, max_arg, shrinkage, guassian_passes, do_prescaler  );
+        printf(" prescaling is active \n");
 
         pxl_input  = copyBufferEveryOther32(pxl_input, &w, &h, shrinkage);
         coarse_arg = coarse_arg/shrinkage;
@@ -283,7 +351,8 @@ void runscan(char* imagepath, int coarse_arg, int max_arg  )
 
     if (show_diag_msg)
     {
-        printf("DEBUG scan settings are %i %i\n", coarse_arg, max_arg);
+        printf(" --> DEBUG scan settings are:\n");
+        printf(" --> coarse %i max %i shrinkage %i gaussian %i  \n", coarse_arg, max_arg, shrinkage, guassian_passes);
     }
 
     /**********************************/
@@ -292,43 +361,51 @@ void runscan(char* imagepath, int coarse_arg, int max_arg  )
     RGBAType *pxl_gauss = copyBuffer32(pxl_input, w, h); 
     RGBAType *pxl_diag  = copyBuffer32(pxl_input, w, h);  
 
-    int clamp_darkval   = 160; // Too high ruins dark images. Too low ruins light images. 160 is just right.
 
-    int candidate_count = 0;
     fiducial *fiducials;
  
     //single pass blurring
     if (!enable_multipass_blur)
     {
-        gaussBlur ( pxl_input, pxl_gauss , w, h, guassian_passes, true , clamp_darkval);
+        printf(" running  single pass gaussian \n");  
+        gaussBlur ( pxl_input, pxl_gauss , w, h, 1, true , clamp_darkval);
+        threshold ( pxl_gauss, w, h, clamp_darkval) ;
+
     }
 
     //multipass blurring works better!!
     if (enable_multipass_blur)
     {
         int xx = 0;
-        for (xx=1;xx<=guassian_passes;xx++){
+        for (xx=1;xx<=guassian_passes;xx++)
+        {
+            printf("running gaussian pass %i \n", xx);
             gaussBlur( pxl_input, pxl_gauss , w, h, xx, true , clamp_darkval);   
             pxl_input = copyBuffer32(pxl_gauss, w, h); 
+            threshold ( pxl_gauss, w, h, clamp_darkval) ;
         }
-        threshold ( pxl_gauss, w, h, clamp_darkval) ;
     }
     
-    fiducials = process_file( pxl_gauss, pxl_diag, w, h, coarse_arg, max_arg, fine_distance, &candidate_count);
+    
+    //normal - pass orignial file as diagnostic 
+    //fiducials = process_file( pxl_gauss, pxl_diag, w, h, coarse_arg, max_arg, fine_distance, &candidate_count);
+
+   if (do_diagnose){
+       write_buffer_png(pxl_gauss, row_pointers, gausfname, w, h, png_ptr, info_ptr, bit_depth, color_type ) ;
+    }
+
+    //pass gaussian as diagnostic 
+    fiducials = process_file( pxl_gauss, pxl_gauss, w, h, coarse_arg, max_arg, fine_distance, &candidate_count);
 
    if (do_diagnose){
 
        /*
        char cwd[1024];
        if (getcwd(cwd, sizeof(cwd)) != NULL){
-           printf("Saving image %s/%s\n\n", cwd, filename);     
+           printf("Saving image %s/%s\n\n", cwd, diagfname);     
        }
        */
-       char gausfname[] = "gaus_diag.png";
-       write_buffer_png(pxl_gauss, row_pointers, gausfname, w, h, png_ptr, info_ptr, bit_depth, color_type ) ;
-       
-       char filename[] = "diagnostic.png";
-       write_buffer_png(pxl_diag, row_pointers, filename, w, h, png_ptr, info_ptr, bit_depth, color_type ) ;
+       write_buffer_png(pxl_gauss, row_pointers, diagfname, w, h, png_ptr, info_ptr, bit_depth, color_type ) ;
 
    }
 
@@ -360,13 +437,13 @@ void runscan(char* imagepath, int coarse_arg, int max_arg  )
 }
 
 
-/***************************************/
-
+/***************************************************************/
+/*
 void run_multiscan(char* imagepath, int coarse_arg, int max_arg  ){
-    /*
-        fancier version of run_scan - run it and look at confidence levels, if they are deemed unsatisfactory
-        then run it again with different settings and take the "best" results from either scan   
-    */
+     
+    // fancier version of run_scan - run it and look at confidence levels, if they are deemed unsatisfactory
+    // then run it again with different settings and take the "best" results from either scan   
+     
 
     int w = 0; int h = 0;
     int nw = 0; int nh = 0; //width and height, will be normalized so width is > height
@@ -564,6 +641,10 @@ void run_multiscan(char* imagepath, int coarse_arg, int max_arg  ){
    free(best_pxl_diag);    
 }
 
+*/
+
+/***************************************************************/
+
 
 /* this is a testing tool for verify_rings/verify_wheel */ 
 void test_verify_point(char *imagepath, int x, int y, float verif_dist, int spokes, int coarse_threshold, int max_threshold)
@@ -602,6 +683,7 @@ void test_verify_point(char *imagepath, int x, int y, float verif_dist, int spok
 
 }
 
+/***************************************************************/
 
 /* this is a testing tool for check_fiducial_angles */
 void test_verify_angles(char *imagepath)
@@ -644,7 +726,8 @@ void test_verify_angles(char *imagepath)
 
 }
 
-/*****************************/
+/***************************************************************/
+
 void parseArgs(int argc, char **argv)
 {
     if (argc < 2){
@@ -717,8 +800,8 @@ void parseArgs(int argc, char **argv)
         diagnose_verify        = true;
         diagnose_confidence    = true;      
         diagnose_anchors       = true;
-        diagnose_verif_angles  = true;    
-        diagnose_verif_rings   = true;
+        //diagnose_verif_angles  = true;    
+        //diagnose_verif_rings   = true;
 
         runscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
         //run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );
@@ -793,24 +876,7 @@ void parseArgs(int argc, char **argv)
         //run_multiscan(argv[2], atoi(argv[3]), atoi(argv[4]) );      
     }  
 
-    /***************************/
-    strcpy(scanmode, "info");
-    if( strcmp(argv[1], scanmode) == 0)
-    {
-        int* ptr = 0;
-        //  format is : [width, height, coarse, max , 24/32 , bits per channel]
-        ptr = read_png_fileinfo( argv[2], w, h, png_ptr, info_ptr, color_type, bit_depth );
-        printf("********************\n" );
-        printf("scan settings:    coarse %i max %i \n", *(ptr+2), *(ptr+3) );
-        printf("width             %i \n", *(ptr  ) );    
-        printf("height            %i \n", *(ptr+1) );  
-        printf("image bit depth   %i \n", *(ptr+4) );  
-        printf("channel depth     %i \n", *(ptr+5) );  
-        printf("scale factor      %i \n", *(ptr+6) ); 
-        printf("gaussian passes   %i \n", *(ptr+7) ); 
-        printf("enable prescaling %i \n", *(ptr+8) ); 
-        printf("********************\n" );
-    }
+
 
     /***************************/
 
@@ -830,6 +896,7 @@ void parseArgs(int argc, char **argv)
     }
 
     /***************************/
+    /***************************/
     strcpy(scanmode, "help");
     if( strcmp(argv[1], scanmode) == 0){;
         printf("\nUsage: \n");
@@ -838,16 +905,20 @@ void parseArgs(int argc, char **argv)
         printf("  \n");
         printf("    mode args: \n");
         printf("      info       : scanfids info IMAGE \n");  
-        printf("      auto       : scanfids auto IMAGE \n");  
+        printf("      auto       : scanfids auto IMAGE \n"); 
+
         printf("      scan       : scanfids scan IMAGE COARSE MAX\n");
         printf("      final      : scanfids final IMAGE COARSE MAX\n");
         printf("      anchor     : scanfids anchor IMAGE COARSE MAX\n");
         printf("      midpoint   : scanfids midpoint IMAGE COARSE MAX\n");                                                     
         printf("      firsthit   : scanfids firsthit IMAGE COARSE MAX\n");
+       
         printf("      gaussian   : scanfids guassian IMAGE COARSE MAX  \n"); 
-        printf("      dumpcache  : scanfids dumpcache IMAGE COARSE MAX\n");
-        printf("      testverify : scanfids testverify IMAGE X Y COARSE MAX\n");        
         printf("      threshold  : scanfids threshold IMAGE BLURAD CLAMPTHRESH  \n"); 
+        
+        printf("      dumpcache  : scanfids dumpcache IMAGE COARSE MAX\n");
+        printf("      testverify : scanfids testverify IMAGE X Y COARSE MAX\n");
+
         printf("  \n");
     }  
 
@@ -861,6 +932,26 @@ void parseArgs(int argc, char **argv)
     //     printf("***********************************\n" );      
     // }  
     
+
+    /***************************/
+    strcpy(scanmode, "info");
+    if( strcmp(argv[1], scanmode) == 0)
+    {
+        int* ptr = 0;
+        //  format is : [width, height, coarse, max , 24/32 , bits per channel]
+        ptr = read_png_fileinfo( argv[2], w, h, png_ptr, info_ptr, color_type, bit_depth );
+        printf("********************\n" );
+        printf("scan settings:    coarse %i max %i \n", *(ptr+2), *(ptr+3) );
+        printf("width             %i \n", *(ptr  ) );    
+        printf("height            %i \n", *(ptr+1) );  
+        printf("image bit depth   %i \n", *(ptr+4) );  
+        printf("channel depth     %i \n", *(ptr+5) );  
+        printf("scale factor      %i \n", *(ptr+6) ); 
+        printf("gaussian passes   %i \n", *(ptr+7) ); 
+        printf("enable prescaling %i \n", *(ptr+8) ); 
+        printf("********************\n" );
+    }
+
     /***************************/
 
     // //output a test image 
@@ -949,7 +1040,6 @@ void parseArgs(int argc, char **argv)
 int main(int argc, char **argv)
 {
 
-    
     do_diagnose         = true;
     show_diag_msg       = true;
 

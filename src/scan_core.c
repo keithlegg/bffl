@@ -204,8 +204,8 @@ void dump_cache( char *filename, int width, int height, int coarse , int max , i
 
 int check_cache_distance( int smpl[2], pix_coord out_coords[], int num, int distance)
     /* check in existing memory cache for a canidate fiducial's distance to existing one 
-    the idea is to filter out redendant points that are too close to each other (or the same)
-    Return a 1 if it is OKAY to cache a new point. 
+       the idea is to filter out redundant points that are too close to each other (or the same)
+       Return a 1 if it is OKAY to cache a new point. 
     */
 {
     distance = int(distance / 3);
@@ -964,7 +964,7 @@ fiducial * process_file(RGBAType *pt_fbInput, RGBAType *pt_fbDiag, int width, in
                                                 fiducials[*candidate_count] = this_candidate; 
                                                 *candidate_count = *candidate_count + 1;
                                             } else {
-                                                goto enough_fiducials;// We've found lots of fiducial candidates so it's time to give up.
+                                                goto enough_fiducials; 
                                             }
                                             if (ch_id < (sizeof(cache_hits) / sizeof(pix_coord)))
                                             {
